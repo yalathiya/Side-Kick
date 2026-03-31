@@ -1,0 +1,8 @@
+# Environment variables (may contain secrets)
+.env
+
+# Claude Code
+.claude/
+
+# Go build output
+/sidekick
