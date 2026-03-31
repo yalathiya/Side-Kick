@@ -12,13 +12,13 @@ Every backend service needs the same cross-cutting concerns: rate limiting, requ
 **Sidekick eliminates all of this.** You write your business logic. Sidekick handles everything else — as a standalone sidecar that sits in front of your service, requiring **zero code changes** to your application.
 
 ```
-                    ┌──────────────────────────────────┐
-  Client Request    │          SIDEKICK                │     Your Service
-─────────────────►  │  Rate Limit → Log → Metrics →    │ ──►  (business
-                    │  Request ID → Real IP → Proxy    │       logic only)
-  ◄─────────────────│                                  │ ◄──
+                    ┌───────────────────────────────────┐
+  Client Request    │          SIDEKICK                 │     Your Service
+─────────────────►  │  Rate Limit → Log → Metrics →     │ ──►  (business
+                    │  Request ID → Real IP → Proxy     │       logic only)
+  ◄─────────────────│                                   │ ◄──
   Response + Headers│  + Dashboard + Prometheus + Health│
-                    └──────────────────────────────────┘
+                    └───────────────────────────────────┘
 ```
 
 ---
