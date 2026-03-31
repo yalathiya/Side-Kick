@@ -6,6 +6,28 @@ It follows the **sidecar pattern**, running alongside your service and handling 
 
 ---
 
+## Why Sidekick Exists
+
+Every backend service needs the same cross-cutting concerns: rate limiting, request logging, metrics, health checks, tracing. But implementing these inside every service leads to:
+
+- **Duplicated code** across services
+- **Inconsistent implementations** (each team does logging differently)
+- **Security vulnerabilities** (hand-rolled rate limiters, missing input validation)
+- **Wasted time** — developers spend 30-40% of effort on non-business-logic code
+
+**Sidekick eliminates all of this.** You write your business logic. Sidekick handles everything else — as a standalone sidecar that sits in front of your service, requiring **zero code changes** to your application.
+
+```
+                    ┌───────────────────────────────────┐
+  Client Request    │          SIDEKICK                 │     Your Service
+─────────────────►  │  Rate Limit → Log → Metrics →     │ ──►  (business
+                    │  Request ID → Real IP → Proxy     │       logic only)
+  ◄─────────────────│                                   │ ◄──
+  Response + Headers│  + Dashboard + Prometheus + Health│
+                    └───────────────────────────────────┘
+```
+
+
 ## Core Capabilities
 
 ### Traffic Management
