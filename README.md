@@ -1,95 +1,173 @@
-# 🚀 Sidekick — Zero-Config API Sidecar Proxy
+# Sidekick — Zero-Config API Sidecar Proxy
 
-Sidekick is a lightweight, plug-and-play API sidecar that adds **rate limiting, authentication, logging, observability, and resilience** to your backend — without modifying your application code.
+Sidekick is a lightweight, plug-and-play API sidecar that adds **rate limiting, logging, observability, and resilience** to your backend — without modifying your application code.
 
 It follows the **sidecar pattern**, running alongside your service and handling cross-cutting concerns like traffic control and monitoring.
 
 ---
 
-## ✨ Core Capabilities
+## Core Capabilities
 
-Sidekick is designed as a **complete API gateway/sidecar solution**, with the following capabilities:
-
-### 🔁 Traffic Management
+### Traffic Management
 
 * Reverse proxy routing to upstream services
 * Path-based request forwarding
-* Header enrichment (`X-Forwarded-*`, `X-Sidekick`)
+* Header enrichment (`X-Forwarded-*`, `X-Sidekick`, `X-Request-ID`)
 
----
-
-### 🚦 Rate Limiting
+### Rate Limiting
 
 * Token Bucket algorithm
-* Per-IP, per-user, and per-endpoint limits
-* Configurable policies
-* Distributed rate limiting (Redis — planned)
+* Per-IP rate limiting
+* Configurable rate and burst size
+
+### Logging & Tracing
+
+* Structured request logging with method, path, status, duration, and client IP
+* Unique `X-Request-ID` on every request
+* Real IP extraction (`X-Forwarded-For`, `X-Real-IP`)
+
+### Observability
+
+* Prometheus metrics at `/metrics`
+* `sidekick_requests_total` — request count by method/route/status
+* `sidekick_request_duration_seconds` — latency histogram
+* `sidekick_ratelimit_hits_total` — rate limit rejections
+
+### Health Check
+
+* `/health` endpoint returning JSON status
+
+### Interactive Dashboard
+
+* Real-time metrics visualization at `/dashboard/`
+* See [Dashboard Features](#dashboard-features) below for the full feature set
 
 ---
 
-### 🔐 Authentication & Security
+## Project Structure
 
-* JWT-based authentication
-* API key support
-* Role-based access control (RBAC)
-* Secure header propagation
-
----
-
-### 🧾 Logging & Tracing
-
-* Structured request logging
-* Request lifecycle tracking
-* Unique `X-Request-ID` for tracing
-* Correlation across services
-
----
-
-### 📊 Observability
-
-* Prometheus metrics (`/metrics`)
-* Request count, latency, error rates
-* Rate limit tracking
-* Future: distributed tracing (OpenTelemetry)
-
----
-
-### ❤️ Health & Reliability
-
-* Health check endpoint (`/health`)
-* Graceful error handling
-* Upstream timeout management
+```
+sidekick/
+├── cmd/sidekick/
+│   └── main.go                  # Entry point
+├── internal/
+│   ├── config/config.go         # Env + .env configuration
+│   ├── proxy/proxy.go           # Reverse proxy with header enrichment
+│   ├── logging/logger.go        # Structured logger
+│   ├── metrics/metrics.go       # Prometheus metric definitions
+│   ├── ratelimit/ratelimit.go   # Token bucket rate limiter
+│   ├── dashboard/
+│   │   ├── dashboard.go         # Dashboard handler + API
+│   │   └── static/index.html    # Embedded SPA dashboard
+│   └── middleware/
+│       ├── requestid.go         # X-Request-ID generation
+│       ├── realip.go            # Client IP extraction
+│       ├── logging.go           # Request logging
+│       ├── metrics.go           # Metrics collection
+│       ├── ratelimit.go         # Rate limit enforcement
+│       └── health.go            # Health endpoint
+├── .env.example                 # Configuration template
+├── .gitignore
+├── go.mod
+└── go.sum
+```
 
 ---
 
-### 🔁 Resilience (Planned)
+## Getting Started
 
-* Circuit breaker
-* Retry mechanism with backoff
-* Failure tracking and recovery
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/your-username/sidekick.git
+cd sidekick
+```
+
+### 2. Configure
+
+Copy the example env file and edit as needed:
+
+```bash
+cp .env.example .env
+```
+
+### 3. Run Tests
+
+Always run the test suite before building, especially after making changes:
+
+```bash
+# Run all tests
+go test ./... -v
+
+# Run tests for a specific package
+go test ./internal/ratelimit/ -v
+go test ./internal/middleware/ -v
+go test ./internal/proxy/ -v
+
+# Run a specific test by name
+go test ./internal/middleware/ -run TestRateLimit -v
+
+# Run with race detector (recommended for concurrency testing)
+go test ./... -race
+
+# Run with coverage report
+go test ./... -coverprofile=coverage.out
+go tool cover -html=coverage.out
+```
+
+**Test coverage includes:**
+
+| Package | Tests | What's covered |
+|---|---|---|
+| `config` | 7 | Defaults, env overrides, invalid input fallback, Addr() |
+| `ratelimit` | 9 | Burst limit, per-key isolation, token refill, concurrency safety |
+| `proxy` | 10 | Upstream forwarding, header enrichment, path/query/body preservation, upstream errors |
+| `middleware` | 34 | RequestID (generation, preservation, uniqueness, UUID format), RealIP (XFF, X-Real-IP, IPv6, fallback), Logging (status capture, passthrough), Metrics (counters, labels, duration), RateLimit (429 response, Retry-After, metric increment, IP isolation), Health (JSON body, structure) |
+| `dashboard` | 8 | Stats API, config API, HTML serving, element presence |
+| `metrics` | 8 | Snapshot, counters, histograms, latency calculation, registry isolation |
+| `integration` | 8 | Full middleware chain: health, proxy, rate limiting, IP isolation, request ID propagation, multi-method tracking |
+| **Total** | **84** | |
+
+### 4. Run Sidekick
+
+```bash
+go run ./cmd/sidekick/
+```
+
+Server starts on `http://localhost:8081` by default.
+
+### 5. Test Endpoints
+
+```bash
+# Health check
+curl http://localhost:8081/health
+
+# Proxy a request to upstream
+curl http://localhost:8081/get
+
+# Prometheus metrics
+curl http://localhost:8081/metrics
+
+# Dashboard
+open http://localhost:8081/dashboard/
+```
 
 ---
 
-### ⚙️ Configuration Management (Planned)
+## Configuration
 
-* SQLite-based configuration
-* Hot reload (no restart required)
-* CLI & dashboard for configuration
+Sidekick is configured via environment variables or a `.env` file. The `.env` file is auto-loaded on startup; env vars take precedence.
 
----
-
-### ☸️ Deployment
-
-* Runs as:
-
-  * Local proxy
-  * Docker container
-  * Kubernetes sidecar
-* Future: Helm chart support
+| Variable | Default | Description |
+|---|---|---|
+| `SIDEKICK_PORT` | `8081` | Port Sidekick listens on |
+| `SIDEKICK_UPSTREAM_URL` | `http://localhost:8080` | Backend service to proxy to |
+| `SIDEKICK_RATE_LIMIT_RATE` | `10` | Tokens per second (per IP) |
+| `SIDEKICK_RATE_LIMIT_BURST` | `20` | Max burst size (per IP) |
 
 ---
 
-## 🧱 Architecture
+## Architecture
 
 ```
 Incoming Request
@@ -104,12 +182,6 @@ Metrics Middleware
       ↓
 Rate Limiter
       ↓
-Auth Middleware (JWT/API Key)
-      ↓
-Circuit Breaker (planned)
-      ↓
-Retry Handler (planned)
-      ↓
 Reverse Proxy
       ↓
 Upstream Service
@@ -117,168 +189,125 @@ Upstream Service
 
 ---
 
-## 📁 Project Structure
+## Dashboard Features
 
-```
-sidekick/
-│
-├── cmd/
-│   └── sidekick/
-│       └── main.go
-│
-├── internal/
-│   ├── logging/
-│   ├── metrics/
-│   ├── ratelimit/
-│   ├── auth/           (planned)
-│   ├── config/         (planned)
-│   ├── circuitbreaker/ (planned)
-│   └── retry/          (planned)
-│
-└── go.mod
-```
+The Sidekick dashboard is a fully interactive, real-time SPA embedded in the Go binary — zero external dependencies at runtime. It is designed to match the feature depth of industry tools like Kong Manager, Traefik Dashboard, Grafana, and Datadog APM.
 
----
+### Phase 1 — Real-Time Monitoring (Current)
 
-## ⚙️ Getting Started
+| Feature | UI Element | Description |
+|---|---|---|
+| Total Requests | Stat card | Cumulative request count |
+| Requests/sec | Stat card + live line chart | Throughput computed from polling delta |
+| Success Rate | Stat card (%) | 2xx+3xx vs 4xx+5xx ratio |
+| Avg Latency | Stat card | Mean response time across all routes |
+| Rate Limit Hits | Stat card | Total 429 rejections |
+| Uptime | Stat card | Time since last server restart |
+| Requests by Route | Bar chart | Traffic volume per endpoint |
+| Status Code Distribution | Doughnut chart | 2xx / 3xx / 4xx / 5xx breakdown |
+| Requests Over Time | Time-series line chart | Live req/s trend (60-point rolling window) |
+| Route Breakdown Table | Sortable table | Method, route, status, count, avg/total latency |
+| Configuration Viewer | Key-value cards | Current env var values |
+| Health Status | Badge (header) | Live healthy/unhealthy indicator with pulse animation |
+| Auto-refresh | 3s polling | All panels update automatically |
 
-### 1️⃣ Clone the repository
+### Phase 2 — Traffic Analytics & Security
 
-```bash
-git clone https://github.com/your-username/sidekick.git
-cd sidekick
-```
+| Feature | UI Element | Description |
+|---|---|---|
+| Latency Percentiles | Multi-line chart | P50 / P95 / P99 latency over time |
+| Latency Heatmap | Heatmap grid | Request duration distribution across time buckets |
+| Top Clients | Ranked bar chart | Top-N client IPs by request count |
+| Top Rate-Limited IPs | Ranked table | IPs hitting rate limits most frequently |
+| Rate Limit Quota Bars | Progress bars (per-IP) | Visual bucket fill level for active clients |
+| Request Size Distribution | Histogram | Request/response payload sizes |
+| Error Rate Trend | Time-series overlay | 4xx and 5xx rates plotted over time |
+| Error Breakdown | Stacked bar chart | Errors by route and status code |
+| JWT Auth Status | Badge per request | Authenticated / Unauthenticated / Expired indicators |
+| Blocked Requests | Counter + table | Requests denied by auth middleware |
+| Live Request Log | Scrolling log stream | Real-time feed of recent requests (last 100) |
+| Request Detail Drawer | Slide-out panel | Full request/response headers, timing breakdown, request ID |
+| Log Search & Filter | Search bar + facets | Filter by method, route, status, IP, request ID |
+| Config Hot Reload Status | Badge + timestamp | Shows last reload time and success/failure |
+| Dark/Light Theme Toggle | Header toggle | User-selectable theme preference (persisted) |
+| Time Range Selector | Dropdown / date picker | View metrics for last 5m / 15m / 1h / 6h / 24h |
 
----
+### Phase 3 — Resilience & Advanced Observability
 
-### 2️⃣ Run Sidekick
+| Feature | UI Element | Description |
+|---|---|---|
+| Circuit Breaker Panel | State badges + chart | Open / Half-Open / Closed state per upstream, with state transition timeline |
+| Circuit Breaker Config | Inline form | Threshold, timeout, and half-open settings display |
+| Retry Metrics | Stat cards + chart | Retry attempts, success-after-retry rate, retry overhead |
+| Upstream Health Table | Status table | Per-upstream health check results, response time, last checked |
+| Upstream Latency Comparison | Grouped bar chart | Side-by-side latency comparison across upstreams |
+| Connection Pool Stats | Gauge cards | Active / Idle / Total connections to upstream |
+| Goroutine & Memory Monitor | Gauge + line chart | Live Go runtime stats (goroutines, heap, GC pauses) |
+| CPU Usage | Line chart | Process CPU usage over time |
+| Alerting Rules Panel | Rule list + toggles | Define error rate / latency thresholds with enable/disable |
+| Alert History | Event timeline | Triggered alerts with severity, timestamp, and details |
+| Notification Badges | Toast / bell icon | In-dashboard alert notifications |
+| Request Waterfall | Waterfall chart | Full timing breakdown (DNS, connect, TLS, TTFB, transfer) |
+| Distributed Trace View | Span timeline | Trace propagation across services via X-Request-ID |
+| Export Metrics | Button | Download current metrics snapshot as JSON / CSV |
 
-```bash
-go run ./cmd/sidekick
-```
+### Phase 4 — Operations & Multi-Instance
 
-Server starts on:
-
-```
-http://localhost:8081
-```
-
----
-
-### 3️⃣ Test Endpoints
-
-#### Health
-
-```bash
-curl http://localhost:8081/health
-```
-
-#### Proxy
-
-```bash
-curl http://localhost:8081/get
-```
-
-#### Metrics
-
-```bash
-curl http://localhost:8081/metrics
-```
-
----
-
-## 📊 Metrics Example
-
-```
-sidekick_requests_total{method="GET",route="/get",status="200"} 10
-sidekick_ratelimit_hits_total 2
-sidekick_request_duration_seconds_bucket{...}
-```
-
----
-
-## 🧾 Logging Example
-
-```
-[req-123] 200 GET /get  8.2ms  client=127.0.0.1
-```
+| Feature | UI Element | Description |
+|---|---|---|
+| Multi-Instance Overview | Instance grid | Health, throughput, error rate per Sidekick instance |
+| Cluster Aggregate Metrics | Combined charts | Merged metrics across all instances |
+| Instance Detail Drill-Down | Tabbed panel | Per-instance deep dive from cluster view |
+| Deployment Timeline | Annotated timeline | Version deployments overlaid on metric charts |
+| Config Diff Viewer | Side-by-side diff | Compare config between instances or versions |
+| Route Management UI | CRUD table | Add / edit / remove proxy routes (with hot reload) |
+| Rate Limit Rule Editor | Form + table | Create / modify rate limit rules per route or IP range |
+| IP Allowlist / Blocklist | Editable list | Manage IP-based access control from the dashboard |
+| Audit Log | Paginated table | All config changes with who, what, when |
+| Webhook Manager | Form | Configure webhook notifications for alerts |
+| Grafana / Datadog Links | External link buttons | Deep-link to external monitoring dashboards |
+| API Documentation | Embedded Swagger UI | Auto-generated API docs for Sidekick's admin endpoints |
+| Plugin Marketplace | Card grid | Enable/disable Sidekick plugins with toggle switches |
 
 ---
 
-## 🎯 Design Goals
+## Roadmap
 
-* ⚡ Minimal latency overhead
-* 🪶 Lightweight & efficient
-* 🔌 Zero-config developer experience
-* 🔍 Built-in observability
-* 🧩 Modular & extensible architecture
-
----
-
-## 🚀 Roadmap
-
-### Phase 1 (Current)
-
-* Reverse proxy
-* Rate limiting (in-memory)
-* Logging + Request ID
-* Prometheus metrics
-* Health endpoint
+- [x] **Phase 1** — Reverse proxy, rate limiting, logging, metrics, health endpoint, real-time dashboard
+- [ ] **Phase 2** — JWT authentication, config management (SQLite + hot reload), Redis rate limiting, traffic analytics dashboard
+- [ ] **Phase 3** — Circuit breaker, retry mechanism, advanced logging (Zap), alerting, runtime monitoring dashboard
+- [ ] **Phase 4** — Kubernetes sidecar integration, Helm charts, OpenTelemetry tracing, multi-instance dashboard
 
 ---
 
-### Phase 2
-
-* JWT Authentication
-* Config management (SQLite + hot reload)
-* Redis-based distributed rate limiting
-
----
-
-### Phase 3
-
-* Circuit breaker
-* Retry mechanism
-* Advanced logging (Zap)
-* Admin dashboard
-
----
-
-### Phase 4
-
-* Kubernetes sidecar integration
-* Helm charts
-* OpenTelemetry tracing
-
----
-
-## 🛠️ Tech Stack
+## Tech Stack
 
 * **Go (Golang)**
 * **Chi Router**
 * **Prometheus Client**
 * **net/http Reverse Proxy**
+* **godotenv**
+* **Chart.js** (embedded dashboard)
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
-Contributions are welcome!
-Feel free to open issues or submit pull requests.
+Contributions are welcome! Feel free to open issues or submit pull requests.
 
 ---
 
-## 📄 License
+## License
 
 MIT License
 
 ---
 
-## 👨‍💻 Author
+## Author
 
 **Yash Lathiya**
 Software Engineer | Backend & System Design Enthusiast
 
 ---
 
-⭐ If you like this project, give it a star!
+If you like this project, give it a star!

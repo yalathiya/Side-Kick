@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sidekick Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #242835;
+      --border: #2e3348;
+      --text: #e2e4ed;
+      --text-dim: #8b8fa3;
+      --accent: #6c5ce7;
+      --accent-glow: rgba(108, 92, 231, 0.15);
+      --green: #00b894;
+      --green-glow: rgba(0, 184, 148, 0.15);
+      --red: #e17055;
+      --red-glow: rgba(225, 112, 85, 0.15);
+      --yellow: #fdcb6e;
+      --yellow-glow: rgba(253, 203, 110, 0.15);
+      --blue: #74b9ff;
+      --blue-glow: rgba(116, 185, 255, 0.15);
+      --radius: 12px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 32px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .logo {
+      width: 36px;
+      height: 36px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .header h1 {
+      font-size: 20px;
+      font-weight: 600;
+    }
+    .header h1 span {
+      color: var(--text-dim);
+      font-weight: 400;
+      font-size: 14px;
+      margin-left: 8px;
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .status-badge.healthy {
+      background: var(--green-glow);
+      color: var(--green);
+    }
+    .status-badge.unhealthy {
+      background: var(--red-glow);
+      color: var(--red);
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .refresh-label {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    /* Main layout */
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 24px 32px;
+    }
+
+    /* Stat cards */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+    }
+    .stat-card.purple::before { background: var(--accent); }
+    .stat-card.green::before { background: var(--green); }
+    .stat-card.red::before { background: var(--red); }
+    .stat-card.blue::before { background: var(--blue); }
+    .stat-card.yellow::before { background: var(--yellow); }
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .stat-sub {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 6px;
+    }
+
+    /* Chart grid */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+    }
+    .chart-card.full-width {
+      grid-column: 1 / -1;
+    }
+    .chart-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+    .chart-container {
+      position: relative;
+      height: 260px;
+    }
+
+    /* Route table */
+    .table-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+    .table-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th {
+      text-align: left;
+      font-size: 11px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 12px 12px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border);
+    }
+    tr:last-child td { border-bottom: none; }
+    .method-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: monospace;
+    }
+    .method-GET { background: var(--green-glow); color: var(--green); }
+    .method-POST { background: var(--blue-glow); color: var(--blue); }
+    .method-PUT { background: var(--yellow-glow); color: var(--yellow); }
+    .method-DELETE { background: var(--red-glow); color: var(--red); }
+    .method-HEAD { background: var(--accent-glow); color: var(--accent); }
+    .method-PATCH { background: var(--yellow-glow); color: var(--yellow); }
+    .status-chip {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: monospace;
+    }
+    .status-2xx { background: var(--green-glow); color: var(--green); }
+    .status-4xx { background: var(--yellow-glow); color: var(--yellow); }
+    .status-5xx { background: var(--red-glow); color: var(--red); }
+    .route-path {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: var(--blue);
+    }
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-dim);
+    }
+
+    /* Config section */
+    .config-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px;
+    }
+    .config-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: var(--surface2);
+      border-radius: 8px;
+    }
+    .config-key {
+      font-size: 12px;
+      color: var(--text-dim);
+      font-family: monospace;
+    }
+    .config-val {
+      font-size: 13px;
+      font-weight: 600;
+      font-family: monospace;
+      color: var(--accent);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .container { padding: 16px; }
+      .chart-grid { grid-template-columns: 1fr; }
+      .stat-grid { grid-template-columns: 1fr 1fr; }
+      .header { padding: 16px; flex-wrap: wrap; gap: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo">S</div>
+    <h1>Sidekick <span>Dashboard</span></h1>
+  </div>
+  <div class="header-right">
+    <div id="health-badge" class="status-badge healthy">
+      <div class="status-dot"></div>
+      <span>Healthy</span>
+    </div>
+    <div class="refresh-label">Auto-refresh: <strong>3s</strong></div>
+  </div>
+</div>
+
+<div class="container">
+  <!-- Stat Cards -->
+  <div class="stat-grid">
+    <div class="stat-card purple">
+      <div class="stat-label">Total Requests</div>
+      <div class="stat-value" id="total-requests">0</div>
+      <div class="stat-sub" id="rps">0 req/s</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Success Rate</div>
+      <div class="stat-value" id="success-rate">—</div>
+      <div class="stat-sub" id="success-detail">No data</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-label">Rate Limited</div>
+      <div class="stat-value" id="ratelimit-hits">0</div>
+      <div class="stat-sub">429 responses</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-label">Avg Latency</div>
+      <div class="stat-value" id="avg-latency">—</div>
+      <div class="stat-sub" id="latency-detail">Across all routes</div>
+    </div>
+    <div class="stat-card yellow">
+      <div class="stat-label">Uptime</div>
+      <div class="stat-value" id="uptime">0s</div>
+      <div class="stat-sub">Since last restart</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Requests by Route</div>
+      <div class="chart-container">
+        <canvas id="chart-routes"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Status Code Distribution</div>
+      <div class="chart-container">
+        <canvas id="chart-status"></canvas>
+      </div>
+    </div>
+    <div class="chart-card full-width">
+      <div class="chart-title">Requests Over Time</div>
+      <div class="chart-container">
+        <canvas id="chart-timeline"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Route Table -->
+  <div class="table-card">
+    <div class="table-title">Route Breakdown</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>Route</th>
+          <th>Status</th>
+          <th style="text-align:right">Requests</th>
+          <th style="text-align:right">Avg Latency</th>
+          <th style="text-align:right">Total Time</th>
+        </tr>
+      </thead>
+      <tbody id="route-table-body">
+        <tr><td colspan="6" class="empty-state">Waiting for data...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Config -->
+  <div class="table-card">
+    <div class="table-title">Configuration</div>
+    <div class="config-grid" id="config-grid">
+      <div class="empty-state">Loading config...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const POLL_INTERVAL = 3000;
+const TIMELINE_MAX = 60;
+
+// Chart colors
+const COLORS = ['#6c5ce7','#00b894','#74b9ff','#fdcb6e','#e17055','#a29bfe','#55efc4','#81ecec','#fab1a0','#ffeaa7'];
+const STATUS_COLORS = { '2xx': '#00b894', '3xx': '#74b9ff', '4xx': '#fdcb6e', '5xx': '#e17055' };
+
+// State
+let prevTotal = null;
+let prevTime = null;
+let timelineData = [];
+let routeChart = null;
+let statusChart = null;
+let timelineChart = null;
+
+// Chart defaults
+Chart.defaults.color = '#8b8fa3';
+Chart.defaults.borderColor = '#2e3348';
+Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+
+function initCharts() {
+  routeChart = new Chart(document.getElementById('chart-routes'), {
+    type: 'bar',
+    data: { labels: [], datasets: [{ label: 'Requests', data: [], backgroundColor: [], borderRadius: 6, borderSkipped: false }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: '#2e3348' }, ticks: { precision: 0 } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  statusChart = new Chart(document.getElementById('chart-status'), {
+    type: 'doughnut',
+    data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderWidth: 0, hoverOffset: 8 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '65%',
+      plugins: {
+        legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true, pointStyleWidth: 10 } }
+      }
+    }
+  });
+
+  timelineChart = new Chart(document.getElementById('chart-timeline'), {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [{
+        label: 'req/s',
+        data: [],
+        borderColor: '#6c5ce7',
+        backgroundColor: 'rgba(108,92,231,0.1)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 0,
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: '#2e3348' }, ticks: { precision: 1 } },
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 12 } }
+      },
+      animation: { duration: 300 }
+    }
+  });
+}
+
+function statusClass(code) {
+  const n = parseInt(code);
+  if (n >= 500) return '5xx';
+  if (n >= 400) return '4xx';
+  if (n >= 300) return '3xx';
+  return '2xx';
+}
+
+function formatDuration(sec) {
+  if (sec < 60) return Math.floor(sec) + 's';
+  if (sec < 3600) return Math.floor(sec / 60) + 'm ' + Math.floor(sec % 60) + 's';
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  return h + 'h ' + m + 'm';
+}
+
+function formatMs(ms) {
+  if (ms < 1) return ms.toFixed(2) + 'ms';
+  if (ms < 1000) return ms.toFixed(1) + 'ms';
+  return (ms / 1000).toFixed(2) + 's';
+}
+
+async function fetchStats() {
+  try {
+    const res = await fetch('/dashboard/api/stats');
+    const data = await res.json();
+    updateDashboard(data);
+  } catch (e) {
+    document.getElementById('health-badge').className = 'status-badge unhealthy';
+    document.getElementById('health-badge').querySelector('span').textContent = 'Unreachable';
+  }
+}
+
+async function fetchConfig() {
+  try {
+    const res = await fetch('/dashboard/api/config');
+    const cfg = await res.json();
+    const grid = document.getElementById('config-grid');
+    const labels = {
+      port: 'SIDEKICK_PORT',
+      upstream_url: 'SIDEKICK_UPSTREAM_URL',
+      rate_limit_rate: 'SIDEKICK_RATE_LIMIT_RATE',
+      rate_limit_burst: 'SIDEKICK_RATE_LIMIT_BURST'
+    };
+    grid.innerHTML = Object.entries(cfg).map(([k, v]) => `
+      <div class="config-item">
+        <span class="config-key">${labels[k] || k}</span>
+        <span class="config-val">${v}</span>
+      </div>
+    `).join('');
+  } catch (e) {
+    document.getElementById('config-grid').innerHTML = '<div class="empty-state">Failed to load config</div>';
+  }
+}
+
+function updateDashboard(data) {
+  const { total_requests, ratelimit_hits, routes, uptime_seconds } = data;
+
+  // Health badge
+  const badge = document.getElementById('health-badge');
+  badge.className = 'status-badge healthy';
+  badge.querySelector('span').textContent = 'Healthy';
+
+  // Total requests
+  document.getElementById('total-requests').textContent = Math.floor(total_requests).toLocaleString();
+
+  // RPS calculation
+  const now = Date.now();
+  if (prevTotal !== null && prevTime !== null) {
+    const dt = (now - prevTime) / 1000;
+    const rps = dt > 0 ? ((total_requests - prevTotal) / dt) : 0;
+    document.getElementById('rps').textContent = rps.toFixed(1) + ' req/s';
+
+    // Timeline
+    const timeLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    timelineData.push({ label: timeLabel, value: rps });
+    if (timelineData.length > TIMELINE_MAX) timelineData.shift();
+    timelineChart.data.labels = timelineData.map(d => d.label);
+    timelineChart.data.datasets[0].data = timelineData.map(d => d.value);
+    timelineChart.update();
+  }
+  prevTotal = total_requests;
+  prevTime = now;
+
+  // Rate limit hits
+  document.getElementById('ratelimit-hits').textContent = Math.floor(ratelimit_hits).toLocaleString();
+
+  // Uptime
+  document.getElementById('uptime').textContent = formatDuration(uptime_seconds);
+
+  // Success rate & avg latency
+  let totalOk = 0, totalErr = 0, totalLatency = 0, totalCount = 0;
+  routes.forEach(r => {
+    const sc = parseInt(r.status);
+    if (sc >= 200 && sc < 400) totalOk += r.count;
+    else totalErr += r.count;
+    totalLatency += r.total_ms;
+    totalCount += r.count;
+  });
+
+  if (totalCount > 0) {
+    const rate = (totalOk / totalCount) * 100;
+    document.getElementById('success-rate').textContent = rate.toFixed(1) + '%';
+    document.getElementById('success-detail').textContent = `${Math.floor(totalOk)} ok / ${Math.floor(totalErr)} err`;
+    const avg = totalLatency / totalCount;
+    document.getElementById('avg-latency').textContent = formatMs(avg);
+  }
+
+  // Route bar chart
+  const routeAgg = {};
+  routes.forEach(r => {
+    const key = r.method + ' ' + r.route;
+    routeAgg[key] = (routeAgg[key] || 0) + r.count;
+  });
+  const routeEntries = Object.entries(routeAgg).sort((a, b) => b[1] - a[1]);
+  routeChart.data.labels = routeEntries.map(e => e[0]);
+  routeChart.data.datasets[0].data = routeEntries.map(e => e[1]);
+  routeChart.data.datasets[0].backgroundColor = routeEntries.map((_, i) => COLORS[i % COLORS.length]);
+  routeChart.update();
+
+  // Status doughnut
+  const statusAgg = {};
+  routes.forEach(r => {
+    const group = statusClass(r.status);
+    statusAgg[group] = (statusAgg[group] || 0) + r.count;
+  });
+  const statusEntries = Object.entries(statusAgg).sort();
+  statusChart.data.labels = statusEntries.map(e => e[0]);
+  statusChart.data.datasets[0].data = statusEntries.map(e => e[1]);
+  statusChart.data.datasets[0].backgroundColor = statusEntries.map(e => STATUS_COLORS[e[0]] || '#8b8fa3');
+  statusChart.update();
+
+  // Route table
+  const tbody = document.getElementById('route-table-body');
+  if (routes.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No requests yet</td></tr>';
+    return;
+  }
+  const sorted = [...routes].sort((a, b) => b.count - a.count);
+  tbody.innerHTML = sorted.map(r => `
+    <tr>
+      <td><span class="method-badge method-${r.method}">${r.method}</span></td>
+      <td class="route-path">${r.route}</td>
+      <td><span class="status-chip status-${statusClass(r.status)}">${r.status}</span></td>
+      <td style="text-align:right; font-family:monospace">${Math.floor(r.count).toLocaleString()}</td>
+      <td style="text-align:right; font-family:monospace">${formatMs(r.avg_ms)}</td>
+      <td style="text-align:right; font-family:monospace">${formatMs(r.total_ms)}</td>
+    </tr>
+  `).join('');
+}
+
+// Boot
+initCharts();
+fetchConfig();
+fetchStats();
+setInterval(fetchStats, POLL_INTERVAL);
+</script>
+</body>
+</html>
