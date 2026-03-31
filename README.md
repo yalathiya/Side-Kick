@@ -74,6 +74,26 @@ sidekick/
 
 ---
 
+## Why Sidekick?
+
+Every backend needs rate limiting, logging, metrics, and health checks. But implementing these inside every service means **duplicated code, inconsistent implementations, security risks, and wasted time.**
+
+Sidekick sits in front of your service and handles all of it — **zero code changes** to your application.
+
+| Concern | Without Sidekick | With Sidekick |
+|---|---|---|
+| Rate limiting | 200-500 lines + dependency + tests | **0 lines** — env var |
+| Structured logging | 100-300 lines + library setup | **0 lines** — automatic |
+| Request tracing (X-Request-ID) | 50-100 lines middleware | **0 lines** — automatic |
+| Prometheus metrics | 100-200 lines + client library | **0 lines** — automatic |
+| Health endpoint | 20-50 lines | **0 lines** — built-in |
+| Monitoring dashboard | 500-2000 lines + frontend | **0 lines** — embedded |
+| **Total per service** | **1000-3000 lines** | **4 env vars** |
+
+> See [USER_STORIES.md](USER_STORIES.md) for detailed real-world scenarios with step-by-step walkthroughs.
+
+---
+
 ## Getting Started
 
 ### 1. Clone the repository
