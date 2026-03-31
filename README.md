@@ -1,19 +1,91 @@
 # 🚀 Sidekick — Zero-Config API Sidecar Proxy
 
-Sidekick is a lightweight, plug-and-play API sidecar that adds **rate limiting, logging, metrics, and request tracing** to your application — without modifying your code.
+Sidekick is a lightweight, plug-and-play API sidecar that adds **rate limiting, authentication, logging, observability, and resilience** to your backend — without modifying your application code.
 
-It runs alongside your service and enhances it with production-grade backend capabilities.
+It follows the **sidecar pattern**, running alongside your service and handling cross-cutting concerns like traffic control and monitoring.
 
 ---
 
-## ✨ Features
+## ✨ Core Capabilities
 
-* 🔁 **Reverse Proxy** — Forward requests to upstream services
-* 🚦 **Rate Limiting** — Token bucket (per IP)
-* 🧾 **Request Logging** — Method, path, status, latency, client IP
-* 🆔 **Request Tracing** — Unique `X-Request-ID` for every request
-* 📊 **Prometheus Metrics** — `/metrics` endpoint
-* ❤️ **Health Check** — `/health` endpoint
+Sidekick is designed as a **complete API gateway/sidecar solution**, with the following capabilities:
+
+### 🔁 Traffic Management
+
+* Reverse proxy routing to upstream services
+* Path-based request forwarding
+* Header enrichment (`X-Forwarded-*`, `X-Sidekick`)
+
+---
+
+### 🚦 Rate Limiting
+
+* Token Bucket algorithm
+* Per-IP, per-user, and per-endpoint limits
+* Configurable policies
+* Distributed rate limiting (Redis — planned)
+
+---
+
+### 🔐 Authentication & Security
+
+* JWT-based authentication
+* API key support
+* Role-based access control (RBAC)
+* Secure header propagation
+
+---
+
+### 🧾 Logging & Tracing
+
+* Structured request logging
+* Request lifecycle tracking
+* Unique `X-Request-ID` for tracing
+* Correlation across services
+
+---
+
+### 📊 Observability
+
+* Prometheus metrics (`/metrics`)
+* Request count, latency, error rates
+* Rate limit tracking
+* Future: distributed tracing (OpenTelemetry)
+
+---
+
+### ❤️ Health & Reliability
+
+* Health check endpoint (`/health`)
+* Graceful error handling
+* Upstream timeout management
+
+---
+
+### 🔁 Resilience (Planned)
+
+* Circuit breaker
+* Retry mechanism with backoff
+* Failure tracking and recovery
+
+---
+
+### ⚙️ Configuration Management (Planned)
+
+* SQLite-based configuration
+* Hot reload (no restart required)
+* CLI & dashboard for configuration
+
+---
+
+### ☸️ Deployment
+
+* Runs as:
+
+  * Local proxy
+  * Docker container
+  * Kubernetes sidecar
+* Future: Helm chart support
 
 ---
 
@@ -31,6 +103,12 @@ Logging Middleware
 Metrics Middleware
       ↓
 Rate Limiter
+      ↓
+Auth Middleware (JWT/API Key)
+      ↓
+Circuit Breaker (planned)
+      ↓
+Retry Handler (planned)
       ↓
 Reverse Proxy
       ↓
@@ -50,12 +128,12 @@ sidekick/
 │
 ├── internal/
 │   ├── logging/
-│   │   └── logging.go
 │   ├── metrics/
-│   │   └── metrics.go
 │   ├── ratelimit/
-│   │   ├── limiter.go
-│   │   └── middleware.go
+│   ├── auth/           (planned)
+│   ├── config/         (planned)
+│   ├── circuitbreaker/ (planned)
+│   └── retry/          (planned)
 │
 └── go.mod
 ```
@@ -73,13 +151,13 @@ cd sidekick
 
 ---
 
-### 2️⃣ Run the server
+### 2️⃣ Run Sidekick
 
 ```bash
 go run ./cmd/sidekick
 ```
 
-Server will start on:
+Server starts on:
 
 ```
 http://localhost:8081
@@ -87,15 +165,15 @@ http://localhost:8081
 
 ---
 
-### 3️⃣ Test endpoints
+### 3️⃣ Test Endpoints
 
-#### Health Check
+#### Health
 
 ```bash
 curl http://localhost:8081/health
 ```
 
-#### Proxy Request
+#### Proxy
 
 ```bash
 curl http://localhost:8081/get
@@ -109,7 +187,7 @@ curl http://localhost:8081/metrics
 
 ---
 
-## 📊 Example Metrics
+## 📊 Metrics Example
 
 ```
 sidekick_requests_total{method="GET",route="/get",status="200"} 10
@@ -119,54 +197,67 @@ sidekick_request_duration_seconds_bucket{...}
 
 ---
 
-## 🚦 Rate Limiting
-
-* Algorithm: **Token Bucket**
-* Default: **5 requests / 10 seconds per IP**
-* Response when exceeded:
-
-```
-HTTP 429 Too Many Requests
-Retry-After: 1
-```
-
----
-
 ## 🧾 Logging Example
 
 ```
-[abc123] 200 GET /get  8.2ms  client=127.0.0.1
+[req-123] 200 GET /get  8.2ms  client=127.0.0.1
 ```
 
 ---
 
 ## 🎯 Design Goals
 
-* ⚡ Low latency overhead
-* 🧩 Zero configuration
-* 🪶 Lightweight (single binary)
+* ⚡ Minimal latency overhead
+* 🪶 Lightweight & efficient
+* 🔌 Zero-config developer experience
 * 🔍 Built-in observability
-* 🔌 Easy integration with any backend
+* 🧩 Modular & extensible architecture
 
 ---
 
 ## 🚀 Roadmap
 
-* 🔐 JWT Authentication
-* 🧠 Config + Hot Reload (SQLite)
-* 🌐 Distributed Rate Limiting (Redis)
-* 🔁 Circuit Breaker & Retry
-* 📦 Kubernetes Sidecar Deployment
-* 📑 Structured Logging (`zap`)
+### Phase 1 (Current)
+
+* Reverse proxy
+* Rate limiting (in-memory)
+* Logging + Request ID
+* Prometheus metrics
+* Health endpoint
+
+---
+
+### Phase 2
+
+* JWT Authentication
+* Config management (SQLite + hot reload)
+* Redis-based distributed rate limiting
+
+---
+
+### Phase 3
+
+* Circuit breaker
+* Retry mechanism
+* Advanced logging (Zap)
+* Admin dashboard
+
+---
+
+### Phase 4
+
+* Kubernetes sidecar integration
+* Helm charts
+* OpenTelemetry tracing
 
 ---
 
 ## 🛠️ Tech Stack
 
-* Go (Golang)
-* Chi Router
-* Prometheus Client
-* net/http Reverse Proxy
+* **Go (Golang)**
+* **Chi Router**
+* **Prometheus Client**
+* **net/http Reverse Proxy**
 
 ---
 
