@@ -30,16 +30,21 @@ func GetRealIP(ctx context.Context) string {
 func extractIP(r *http.Request) string {
 	// Check X-Forwarded-For first
 	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		// Take the first IP in the chain
-		if i := strings.IndexByte(xff, ','); i > 0 {
-			return strings.TrimSpace(xff[:i])
+		// Split by comma and find the first valid IP
+		parts := strings.Split(xff, ",")
+		for _, part := range parts {
+			ip := strings.TrimSpace(part)
+			if net.ParseIP(ip) != nil {
+				return ip
+			}
 		}
-		return strings.TrimSpace(xff)
 	}
 
 	// Check X-Real-IP
 	if xri := r.Header.Get("X-Real-IP"); xri != "" {
-		return strings.TrimSpace(xri)
+		if net.ParseIP(strings.TrimSpace(xri)) != nil {
+			return strings.TrimSpace(xri)
+		}
 	}
 
 	// Fall back to RemoteAddr

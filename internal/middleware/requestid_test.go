@@ -93,3 +93,60 @@ func TestGetRequestID_EmptyContext(t *testing.T) {
 		t.Errorf("expected empty ID for bare context, got %q", id)
 	}
 }
+
+func TestRequestID_MultipleHeaders(t *testing.T) {
+	handler := RequestID(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id := GetRequestID(r.Context())
+		w.Header().Set("X-Test-ID", id)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Add("X-Request-ID", "first-id")
+	req.Header.Add("X-Request-ID", "second-id") // Should take first
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if got := rr.Header().Get("X-Test-ID"); got != "first-id" {
+		t.Errorf("expected first header value 'first-id', got %q", got)
+	}
+}
+
+func TestRequestID_EmptyHeader(t *testing.T) {
+	handler := RequestID(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id := GetRequestID(r.Context())
+		w.Header().Set("X-Test-ID", id)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("X-Request-ID", "")
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	// Should generate new ID when header is empty
+	got := rr.Header().Get("X-Test-ID")
+	if got == "" {
+		t.Error("expected generated ID when header is empty")
+	}
+	if len(got) != 36 {
+		t.Errorf("expected UUID length 36, got %d", len(got))
+	}
+}
+
+func TestRequestID_TrimWhitespace(t *testing.T) {
+	handler := RequestID(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		id := GetRequestID(r.Context())
+		w.Header().Set("X-Test-ID", id)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("X-Request-ID", "  trimmed-id  ")
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if got := rr.Header().Get("X-Test-ID"); got != "trimmed-id" {
+		t.Errorf("expected trimmed ID 'trimmed-id', got %q", got)
+	}
+}

@@ -170,3 +170,42 @@ func TestAllow_RapidRequests(t *testing.T) {
 		t.Errorf("expected all 10 rapid requests rejected, got %d rejected", rejected)
 	}
 }
+
+func TestCleanup_DoesNotPanic(t *testing.T) {
+	rl := New(10, 10)
+
+	// Add some buckets
+	rl.Allow("test1")
+	rl.Allow("test2")
+	rl.Allow("test3")
+
+	// Verify buckets were created
+	rl.mu.Lock()
+	initialCount := len(rl.buckets)
+	rl.mu.Unlock()
+
+	if initialCount != 3 {
+		t.Errorf("expected 3 buckets, got %d", initialCount)
+	}
+
+	// Wait a bit to ensure cleanup goroutine runs without panicking
+	// (cleanup runs every 5 minutes, but we can't wait that long)
+	// This test mainly ensures the goroutine doesn't crash immediately
+	time.Sleep(100 * time.Millisecond)
+}
+
+func TestCleanup_BucketCreation(t *testing.T) {
+	rl := New(10, 10)
+
+	// Create buckets
+	rl.Allow("ip1")
+	rl.Allow("ip2")
+
+	rl.mu.Lock()
+	count := len(rl.buckets)
+	rl.mu.Unlock()
+
+	if count != 2 {
+		t.Errorf("expected 2 buckets created, got %d", count)
+	}
+}

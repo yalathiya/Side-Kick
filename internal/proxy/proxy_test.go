@@ -180,3 +180,47 @@ func TestProxy_HandlesUpstreamError(t *testing.T) {
 		t.Errorf("expected 502 Bad Gateway for unreachable upstream, got %d", rr.Code)
 	}
 }
+
+func TestProxy_ForwardsUpstream4xxError(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("not found"))
+	}))
+	defer upstream.Close()
+
+	handler, _ := New(upstream.URL)
+	req := httptest.NewRequest(http.MethodGet, "/missing", nil)
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", rr.Code)
+	}
+	body, _ := io.ReadAll(rr.Body)
+	if string(body) != "not found" {
+		t.Errorf("expected body 'not found', got %q", string(body))
+	}
+}
+
+func TestProxy_ForwardsUpstream5xxError(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("server error"))
+	}))
+	defer upstream.Close()
+
+	handler, _ := New(upstream.URL)
+	req := httptest.NewRequest(http.MethodGet, "/error", nil)
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", rr.Code)
+	}
+	body, _ := io.ReadAll(rr.Body)
+	if string(body) != "server error" {
+		t.Errorf("expected body 'server error', got %q", string(body))
+	}
+}

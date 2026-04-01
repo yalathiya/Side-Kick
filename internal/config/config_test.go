@@ -132,3 +132,55 @@ func TestGetEnvFloat(t *testing.T) {
 		t.Errorf("expected fallback 1.0, got %f", got)
 	}
 }
+
+func TestLoad_InvalidRateLimitValues(t *testing.T) {
+	tests := []struct {
+		envVar string
+		value  string
+		desc   string
+	}{
+		{"SIDEKICK_RATE_LIMIT_RATE", "-1", "negative rate"},
+		{"SIDEKICK_RATE_LIMIT_RATE", "0", "zero rate"},
+		{"SIDEKICK_RATE_LIMIT_RATE", "abc", "non-numeric rate"},
+		{"SIDEKICK_RATE_LIMIT_BURST", "-5", "negative burst"},
+		{"SIDEKICK_RATE_LIMIT_BURST", "0", "zero burst"},
+		{"SIDEKICK_RATE_LIMIT_BURST", "xyz", "non-numeric burst"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			t.Setenv(tt.envVar, tt.value)
+			cfg := Load()
+
+			// Should fall back to defaults
+			if cfg.RateLimitRate != 10 {
+				t.Errorf("expected default rate 10, got %f", cfg.RateLimitRate)
+			}
+			if cfg.RateLimitBurst != 20 {
+				t.Errorf("expected default burst 20, got %d", cfg.RateLimitBurst)
+			}
+		})
+	}
+}
+
+func TestLoad_InvalidPortValue(t *testing.T) {
+	t.Setenv("SIDEKICK_PORT", "invalid-port")
+
+	cfg := Load()
+
+	// Should fall back to default
+	if cfg.Port != 8081 {
+		t.Errorf("expected default port 8081, got %d", cfg.Port)
+	}
+}
+
+func TestLoad_InvalidUpstreamURL(t *testing.T) {
+	t.Setenv("SIDEKICK_UPSTREAM_URL", "://invalid-url")
+
+	cfg := Load()
+
+	// Should fall back to default
+	if cfg.UpstreamURL != "http://localhost:8080" {
+		t.Errorf("expected default upstream, got %s", cfg.UpstreamURL)
+	}
+}

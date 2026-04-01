@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -14,7 +15,7 @@ const RequestIDKey ctxKey = "requestID"
 // RequestID generates a unique request ID and sets it in the context and response headers.
 func RequestID(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		id := r.Header.Get("X-Request-ID")
+		id := strings.TrimSpace(r.Header.Get("X-Request-ID"))
 		if id == "" {
 			id = uuid.New().String()
 		}

@@ -134,3 +134,54 @@ func TestRealIP_IPv6(t *testing.T) {
 		t.Errorf("expected ::1, got %q", gotIP)
 	}
 }
+
+func TestRealIP_MalformedXForwardedFor(t *testing.T) {
+	var gotIP string
+	handler := RealIP(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotIP = GetRealIP(r.Context())
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("X-Forwarded-For", "invalid-ip, 203.0.113.50")
+	req.RemoteAddr = "192.0.2.1:1234"
+	handler.ServeHTTP(httptest.NewRecorder(), req)
+
+	// Should skip invalid IP and take the valid one
+	if gotIP != "203.0.113.50" {
+		t.Errorf("expected valid IP 203.0.113.50, got %q", gotIP)
+	}
+}
+
+func TestRealIP_AllInvalidXForwardedFor(t *testing.T) {
+	var gotIP string
+	handler := RealIP(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotIP = GetRealIP(r.Context())
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("X-Forwarded-For", "invalid, also-invalid, not-an-ip")
+	req.RemoteAddr = "192.0.2.1:1234"
+	handler.ServeHTTP(httptest.NewRecorder(), req)
+
+	// Should fall back to RemoteAddr
+	if gotIP != "192.0.2.1" {
+		t.Errorf("expected fallback to RemoteAddr 192.0.2.1, got %q", gotIP)
+	}
+}
+
+func TestRealIP_EmptyXForwardedFor(t *testing.T) {
+	var gotIP string
+	handler := RealIP(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotIP = GetRealIP(r.Context())
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("X-Forwarded-For", "")
+	req.RemoteAddr = "192.0.2.1:1234"
+	handler.ServeHTTP(httptest.NewRecorder(), req)
+
+	// Should fall back to RemoteAddr
+	if gotIP != "192.0.2.1" {
+		t.Errorf("expected fallback to RemoteAddr 192.0.2.1, got %q", gotIP)
+	}
+}

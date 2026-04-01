@@ -63,14 +63,13 @@ func (m *Metrics) Snapshot() Snapshot {
 
 	durMap := map[string]*dto.Metric{} // key -> histogram metric
 	for metric := range durCh {
-		var dm dto.Metric
-		if err := metric.Write(&dm); err != nil {
+		dm := &dto.Metric{}
+		if err := metric.Write(dm); err != nil {
 			continue
 		}
 		labels := labelMap(dm.GetLabel())
 		key := labels["method"] + "|" + labels["route"] + "|" + labels["status"]
-		copied := dm
-		durMap[key] = &copied
+		durMap[key] = dm
 	}
 
 	for key, count := range countMap {
