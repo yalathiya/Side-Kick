@@ -15,7 +15,7 @@ import (
 )
 
 // buildStack creates a full middleware chain matching the production setup.
-func buildStack(m *metrics.Metrics, limiter *ratelimit.TokenBucket, upstream http.Handler) http.Handler {
+func buildStack(m *metrics.Metrics, limiter ratelimit.Limiter, upstream http.Handler) http.Handler {
 	logger := logging.New()
 	r := chi.NewRouter()
 

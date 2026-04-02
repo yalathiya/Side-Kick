@@ -8,8 +8,8 @@ import (
 	"github.com/yash/sidekick/internal/ratelimit"
 )
 
-// RateLimit applies per-IP rate limiting using a token bucket algorithm.
-func RateLimit(limiter *ratelimit.TokenBucket, m *metrics.Metrics) func(http.Handler) http.Handler {
+// RateLimit applies per-IP rate limiting using any Limiter backend (in-memory or Redis).
+func RateLimit(limiter ratelimit.Limiter, m *metrics.Metrics) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ip := GetRealIP(r.Context())
